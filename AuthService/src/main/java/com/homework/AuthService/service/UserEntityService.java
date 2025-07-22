@@ -3,11 +3,13 @@ package com.homework.AuthService.service;
 import com.homework.AuthService.dto.UserRegistrationDto;
 import com.homework.AuthService.error.InvalidPasswordException;
 import com.homework.AuthService.error.RoleNotFoundException;
+import com.homework.AuthService.error.UserNotFoundException;
 import com.homework.AuthService.mapper.UserRegistrationMapper;
 import com.homework.AuthService.model.Role;
 import com.homework.AuthService.model.UserEntity;
 import com.homework.AuthService.repository.RoleRepository;
 import com.homework.AuthService.repository.UserEntityRepository;
+import com.homework.AuthService.security.UserTokenService;
 import com.homework.AuthService.settings.Constants;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class UserEntityService {
     private PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final UserRegistrationMapper userRegistrationMapper;
+    private final UserTokenService userTokenService;
 
     public void save(UserRegistrationDto newUser) {
         String defaultRoleTitle = Constants.USER_ROLE_TITLE;
@@ -35,6 +38,14 @@ public class UserEntityService {
         userEntity.setPassword(passwordEncoder.encode(password));
         userEntity.addRole(defaultRole);
         userEntityRepository.save(userEntity);
+    }
+
+    public void banUser(long userId) {
+        UserEntity user = userEntityRepository.findById(userId).orElseThrow(
+                () -> new UserNotFoundException("no user with id: " + userId)
+        );
+        user.setEnabled(false);
+        userTokenService.revokeUserToken(userId);
     }
 
     private void validatePassword(String password) throws InvalidPasswordException {
